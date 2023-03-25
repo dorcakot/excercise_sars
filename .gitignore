@@ -1,0 +1,7 @@
+.idea
+.DS_Store
+data/*/*.bam*
+data/*/*.bcf*
+data/*/*.fasta
+data/reference/*.fasta.*
+
