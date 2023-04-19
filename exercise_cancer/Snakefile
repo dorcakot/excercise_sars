@@ -1,0 +1,57 @@
+configfile: "config.json"
+
+rule all:
+    input:
+        "depth_ratio.png"
+
+rule bwa_index_ref:
+    input:
+        "data/reference/reference.fasta"
+    output:
+        "data/reference/reference.fasta.bwt"
+    shell:
+        "bwa index {input}"
+
+rule align_sort_samples:
+    input:
+        ref="data/reference/reference.fasta",
+        ref_index="data/reference/reference.fasta.bwt",
+        r1="data/{sample}/{pair}/{pair}.R1.fastq.gz",
+        r2="data/{sample}/{pair}/{pair}.R2.fastq.gz"
+    output:
+        "data/{sample}/{pair}/{pair}_aligned.bam"
+    shell:
+        "bwa mem {input.ref} {input.r1} {input.r2} | samtools sort -o {output}"
+
+rule index_alignment:
+    input:
+        "data/{sample}/{pair}/{pair}_aligned.bam"
+    output:
+        "data/{sample}/{pair}/{pair}_aligned.bam.bai"
+    shell:
+        "samtools index {input}"
+
+rule subset:
+    input:
+        bam="data/{sample}/{pair}/{pair}_aligned.bam"
+    output:
+	"data/{sample}/{pair}/{pair}_subset.bam"
+    shell:
+        "samtools view -b {input} chrX:20000000-40000000 > {output}"
+
+rule calculate_depth:
+    input:
+        calls="data/{sample}/{pair}/{pair}_subset.bam"
+    output:
+        "data/{sample}/{pair}/{pair}_subset.depth"
+    shell:
+        "samtools depth {input} > {output}"
+
+rule generate_plot:
+    input:
+        tu="data/sample1/tu/tu_subset.depth",
+        wt="data/sample1/wt/wt_subset.depth"
+    output:
+        "depth_ratio.png"
+    shell:
+        "python3 plot.py --normal {input.wt} --tumor {input.tu}"
