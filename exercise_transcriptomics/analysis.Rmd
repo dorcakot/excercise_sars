@@ -1,0 +1,65 @@
+---
+title: 'Exercise 3: Working with count matrices'
+output:
+  html_document:
+    df_print: paged
+---
+
+In this exercise we want to run a differential gene expression analysis using an RNA-Seq count matrix (sample.counts). The sample metadata is available here: sample.info. Starting from an Rscript template please run a differential expression analysis, generate PCA, Heatmap and MA-plots and export the results into a CSV file
+
+```{r, warning=FALSE, message=FALSE}
+library(DESeq2)
+library(pheatmap)
+```
+
+### Load the data
+```{r}
+counts = read.table("data/sample.counts", row.names=1, header=T, sep=",")
+samples = read.table("data/sample.info", header=T, row.names=1, colClasses=c("character", "factor"))
+counts
+samples
+```
+
+
+### Create DESeq2 object
+```{r}
+dds = DESeqDataSetFromMatrix(countData = counts, colData = samples, design = ~ condition)
+```
+
+### Run a differential expression analysis (Tumour vs. Normal) using a log-fold change threshold of 1
+```{r}
+dds <- DESeq(dds)
+res <- results(dds, lfcThreshold = 1)
+res
+```
+
+### Generate an MA-plot
+```{r}
+plotMA(res, ylim=c(-5,5))
+```
+
+### Plot the normalized counts for the GJB2 gene
+```{r}
+plotCounts(dds, gene='GJB2', intgroup="condition")
+```
+
+### Generate a PCA plot of the samples using the transformed count data
+```{r}
+vsd <- vst(dds, blind=FALSE)
+plotPCA(vsd, intgroup=c("condition"))
+```
+
+### Visualize the differential gene expression results as a heatmap
+```{r}
+select <- rownames(res)[order(res$padj,decreasing=FALSE)][1:20]
+pheatmap(assay(vsd)[select,], 
+         show_rownames=TRUE, cluster_cols=TRUE, cluster_rows = TRUE, show_colnames = TRUE)
+```
+
+### Export the significant results (padj < 0.01) to a CSV file
+```{r}
+significant_results <- subset(res, padj < 0.01)
+write.csv(as.data.frame(significant_results), file="significant_results.csv")
+```
+
+### 
